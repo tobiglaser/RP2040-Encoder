@@ -1,5 +1,5 @@
 #ifndef QUADRATURE_H
-#define QUADRATURE_H APR_2022
+#define QUADRATURE_H DEC_2023
 
 #include "gpio_irq_handler.h"
 
@@ -64,7 +64,7 @@ public:
     long count() { return cnt; }
 
     //Resets the count to 0 or a specified value.
-    void reset_count(int new_value = 0) { count = new_value; }
+    void reset_count(int new_value = 0) { cnt = new_value; }
 
     //Initializes the pins, pulls them as specified and attaches the interrupts
     void begin(pull_direction = pull_direction::none, resolution = resolution::quarter);
