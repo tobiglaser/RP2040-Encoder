@@ -67,7 +67,7 @@ public:
     void reset_count(int new_value = 0) { cnt = new_value; }
 
     //Initializes the pins, pulls them as specified and attaches the interrupts
-    void begin(pull_direction = pull_direction::none, resolution = resolution::quarter);
+    void begin(pull_direction = pull_direction::none, resolution = resolution::quarter, int debounce_delay_us = 0);
 
     //Detattches the interrupts and resets any pulling.
     //This function is also called during destruction.
@@ -77,6 +77,9 @@ public:
 
 private:
     static inline volatile int32_t cnt = 0;
+    static inline int32_t debounce_delay = 0;
+    static inline int32_t last_A_change = 0;
+    static inline int32_t last_B_change = 0;
 
     // ISRs
     static void on_A_change(uint gpio, uint32_t events);
@@ -92,8 +95,9 @@ Quadrature_encoder<A_pin, B_pin>::~Quadrature_encoder()
 }
 
 template<int A_pin, int B_pin>
-void Quadrature_encoder<A_pin, B_pin>::begin(pull_direction pull_dir, resolution res)
+void Quadrature_encoder<A_pin, B_pin>::begin(pull_direction pull_dir, resolution res, int debounce_delay_us)
 {
+    debounce_delay = debounce_delay_us;
     // configure the pins
     gpio_init(A_pin);
     gpio_init(B_pin);
@@ -145,37 +149,45 @@ void Quadrature_encoder<A_pin, B_pin>::end()
 template<int A_pin, int B_pin>
 void Quadrature_encoder<A_pin, B_pin>::on_A_change(uint gpio, uint32_t events)
 {
-    if (events == GPIO_IRQ_EDGE_RISE)
+    if (time_us_32() > last_A_change + debounce_delay)
     {
-        if (gpio_get(B_pin))
-            --cnt;
+        if (events == GPIO_IRQ_EDGE_RISE)
+        {
+            if (gpio_get(B_pin))
+                --cnt;
+            else
+                ++cnt;
+        }
         else
-            ++cnt;
-    }
-    else
-    {
-        if (gpio_get(B_pin))
-            ++cnt;
-        else
-            --cnt;
+        {
+            if (gpio_get(B_pin))
+                ++cnt;
+            else
+                --cnt;
+        }
+        last_A_change = time_us_32();
     }
 }
 
 template<int A_pin, int B_pin>
 void Quadrature_encoder<A_pin, B_pin>::on_B_change(uint gpio, uint32_t events)
 {
-    if (events == GPIO_IRQ_EDGE_FALL)
+    if (time_us_32() > last_B_change + debounce_delay)
     {
-        if (gpio_get(A_pin))
-            --cnt;
-        else
-            ++cnt;
-    }
-    else {
-        if (gpio_get(A_pin))
-            ++cnt;
-        else
-            --cnt;
+        if (events == GPIO_IRQ_EDGE_FALL)
+        {
+            if (gpio_get(A_pin))
+                --cnt;
+            else
+                ++cnt;
+        }
+        else {
+            if (gpio_get(A_pin))
+                ++cnt;
+            else
+                --cnt;
+        }
+        last_B_change = time_us_32();
     }
 }
 
